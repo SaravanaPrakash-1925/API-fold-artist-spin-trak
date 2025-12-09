@@ -1,0 +1,21 @@
+experiment:
+  name: experiment_4
+  models: ["/mnt/remote-storage/new_finetunings/two_songs/weights/"]
+  gpu_id: null
+
+input:
+  prompts:
+    - "Slow, melancholic salsa groove"
+    - "Fast, happy salsa groove"
+    - "Slow, melancholic indie rock riff"
+    - "Fast, happy indie rock riff"
+    - "Dysrhytmic techno"
+  seeds:
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+  durations:
+    - 30
+

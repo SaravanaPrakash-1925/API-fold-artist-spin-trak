@@ -1,0 +1,18 @@
+experiment:
+  name: experiment_3
+  models: ["/mnt/remote-storage/new_finetunings/two_songs/weights/"]
+  gpu_id: null
+
+input:
+  prompts:
+    - "Moody alternative rock ballad with spacious electric guitars, steady drums, and warm bass; builds from soft verses to a bigger, emotive chorus. No vocals."
+    - "Lively salsa groove with bright horns, piano montuno, congas and timbales, rolling bass, and punchy breaks. No vocals."
+  seeds:
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+  durations:
+    - 30
+

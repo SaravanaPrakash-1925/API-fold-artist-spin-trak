@@ -1,0 +1,101 @@
+import logging
+import os
+from torch.utils.tensorboard import SummaryWriter
+import torch
+import torch.nn as nn
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+# from typing import Literal, Optional
+import typing as tp
+from rich.logging import RichHandler
+
+_log_level_options = tp.Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+# Configuration
+writer = SummaryWriter(log_dir="runs/experiment1")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SAMPLE_RATE = 16000
+N_FFT = 1024
+HOP_LENGTH = 512
+N_MELS = 128
+SEQ_LEN = 128
+EMBED_DIM = 2048  # Updated to match MusicGen Stereo Large
+# Global storage
+MODELS: dict[str, nn.Module] = {}
+EMBEDDINGS: dict[str, torch.Tensor] = {}
+SONG_NAMES: dict[str, list[str]] = {}
+LOCAL_MODEL_DIR = "/mnt/remote-storage/"
+MelodyList = tp.List[tp.Optional[torch.Tensor]]
+MelodyType = tp.Union[torch.Tensor, MelodyList]
+MODEL_CONFIGS = {
+    "dora:stereo-large-musicgen:fold-blues": {
+        "dataset_path": "/mnt/remote-storage/blues",
+        # TODO change to a real finetuning directory
+        "checkpoint_path": Path(LOCAL_MODEL_DIR) / "fb-large/",
+        "embedding_path": "/mnt/remote-storage/blues_audio_embeddings.pt",
+    }
+}
+
+
+# From https://github.com/jakob1379/sane-rich-logging
+def setup_logging(
+    log_file: str | None = None,
+    log_level: tp.Optional[_log_level_options] = None,
+    log_max_size: tp.Optional[int] | None = None,
+) -> None:
+    """
+    Configures logging for console and file outputs with different handlers and formats.
+
+    Args:
+        log_file (str | None): The file path to store log outputs. If provided, enables file
+            logging at the specified path. Defaults to None (no file logging).
+        log_level (Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None): The log level
+            for both console and file handlers. Defaults to environment variable LOG_LEVEL or
+            "DEBUG".
+        log_max_size (int | None): Maximum size of the log file before it gets rotated.
+            Only used if log_file is provided. Defaults to environment variable LOG_MAX_SIZE or 5MB.
+    """
+
+    # Determine log configuration from arguments or environment variables
+    log_level = log_level or os.environ.get("LOG_LEVEL", "DEBUG").upper()
+    log_level_numeric = getattr(logging, log_level, logging.DEBUG)
+
+    # Root logger configuration
+    logger = logging.getLogger()
+    logger.setLevel(log_level_numeric)
+
+    # Rich console handler
+    console_handler = RichHandler(rich_tracebacks=True, show_time=False)
+    console_handler.setLevel(log_level_numeric)
+    console_handler.setFormatter(
+        logging.Formatter(fmt="[%(asctime)s] [%(filename)s:%(lineno)d] %(message)s", datefmt="%d.%m.%y %H:%M:%S")
+    )
+    logger.addHandler(console_handler)
+
+    if log_file is not None:
+        # Only configure file logging if log_file is provided
+        log_max_size = log_max_size or int(
+            os.environ.get("LOG_MAX_SIZE", 5 * 1024 * 1024)
+        )
+
+        # File handler with rotation
+        file_formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] - %(message)s"
+        )
+        file_handler = RotatingFileHandler(
+            log_file, maxBytes=log_max_size, backupCount=5
+        )
+        file_handler.setLevel(log_level_numeric)
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
+
+def get_song_names(dataset_path: str) -> list[str]:
+    logging.info(f"Loading song names from {dataset_path}")
+    audio_files = []
+    audio_extensions = [".wav", ".mp3", ".flac", ".m4a", ".aac"]
+    for root, _, files in os.walk(dataset_path):
+        for file in files:
+            if any(file.lower().endswith(ext) for ext in audio_extensions):
+                audio_files.append(os.path.join(root, file))
+    return sorted(audio_files)
