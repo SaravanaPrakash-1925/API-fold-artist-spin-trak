@@ -12,12 +12,16 @@ To set up the environment run the following commands:
 * `source venv/bin/activate`
 * `uv pip install -e .`
 
-## Running single generation
-`spintrak generate-audio --prompt "A calm piano melody" --duration 30`
+## Running API
 
-## Running single attribution scores calculation
-`spintrak generate-gradients --prompt "calm ocean waves" --duration 30 --output ./calm_ocean_gradients.pt`
+ * Before running the API, generate Gradient for the entire dataset (phase1)
+ 
+`spintrak generate-training-dataset-parallel \
+    --input /home/ubuntu/phase1_data \
+    --model /home/ubuntu/musicgen_finetunes/Phase1-Checkpoint \
+    --output /home/ubuntu/phase1_gradients.bin \
+    --processes-per-gpu 1`
 
-## Running experiments
+* From the API-fold-artist-spin-trak\src\spintrak folder run the below commands to run the API
 
-To run experiments please refer to the [Experiments.md](./Experiments.md) file in the `experiments` directory.
+`uvicorn influence_api:app --host 0.0.0.0 --port 8002 --reload`
